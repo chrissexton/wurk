@@ -9,7 +9,6 @@ import (
 	"log"
 	"net/http"
 	"os"
-	"regexp"
 	"strings"
 )
 
@@ -174,24 +173,14 @@ func renderTemplate(w http.ResponseWriter, r *http.Request, tmpl string, data in
 	}
 }
 
-var titleValidator = regexp.MustCompile("([A-Z][a-z0-9])+")
-
-func makeHandler(fn func(http.ResponseWriter, *http.Request, string)) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		title := r.URL.Path[lenPath:]
-		if !titleValidator.MatchString(title) {
-			http.NotFound(w, r)
-			return
-		}
-		fn(w, r, title)
-	}
-}
-
 func main() {
 	if len(os.Args) < 2 {
 		log.Fatal("Must have a data directory argument.")
 	}
 	dataDir = os.Args[1]
+	if dataDir[len(dataDir)-1] != '/' {
+		dataDir = dataDir + "/"
+	}
 	http.HandleFunc("/", pageHandler)
-	http.ListenAndServe(":8080", nil)
+	http.ListenAndServe("127.0.0.1:6969", nil)
 }
