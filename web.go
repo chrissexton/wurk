@@ -20,7 +20,6 @@ var htmlFiles = []string{
 }
 
 var dataDir = "chrissexton.org/site/"
-var staticDir = "chrissexton.org/"
 var siteUrl = "http://127.0.0.1:8080"
 
 var templates *template.Template
@@ -71,9 +70,9 @@ func loadDir(path string) ([]Link, error) {
 		return nil, errors.New("Path not found")
 	}
 
-	path = dataDir + path
-	log.Println("Loading directory: ", path)
-	files, err := ioutil.ReadDir(path)
+	dirname := dataDir + path
+	log.Println("Loading directory: ", dirname)
+	files, err := ioutil.ReadDir(dirname)
 	if err != nil {
 		log.Println(err)
 		return nil, err
@@ -88,7 +87,7 @@ func loadDir(path string) ([]Link, error) {
 		if len(f) > 3 && f[len(f)-3:] == ".md" {
 			f = f[:len(f)-3]
 		}
-		links = append(links, Link{f, path + "/" + f})
+		links = append(links, Link{f, "/" + path + "/" + f})
 	}
 	return links, nil
 }
@@ -120,6 +119,30 @@ func viewHandler(w http.ResponseWriter, r *http.Request, title string) {
 	renderTemplate(w, r, "view", p)
 }
 
+func dirHandler(w http.ResponseWriter, r *http.Request) {
+	path := r.URL.Path
+	dir, err := loadDir(path)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusNotFound)
+		return
+	}
+	renderTemplate(w, r, "header", breadCrumb(r.URL.Path))
+	renderTemplate(w, r, "dir", dir)
+	renderTemplate(w, r, "footer", nil)
+}
+
+func fileHandler(w http.ResponseWriter, r *http.Request) {
+	path := r.URL.Path[1:]
+	filename := dataDir + path
+	log.Println("Loading ", filename)
+	file, err := ioutil.ReadFile(filename)
+	if err != nil {
+		dirHandler(w, r)
+		return
+	}
+	fmt.Fprintf(w, "%s", file)
+}
+
 func pageHandler(w http.ResponseWriter, r *http.Request) {
 	// verify the file path
 	path := r.URL.Path
@@ -127,20 +150,12 @@ func pageHandler(w http.ResponseWriter, r *http.Request) {
 	page, err := loadPage(path)
 	if err != nil {
 		page, err = loadPage(path + "/index")
-	}
-	if err != nil {
-		dir, err := loadDir(path)
 		if err != nil {
-			http.Error(w, err.Error(), http.StatusNotFound)
+			fileHandler(w, r)
 			return
 		}
-		renderTemplate(w, r, "header", breadCrumb(r.URL.Path))
-		renderTemplate(w, r, "dir", dir)
-		renderTemplate(w, r, "footer", nil)
-		return
 	}
 	html := template.HTML(blackfriday.MarkdownCommon(page.Body))
-	// out := struct{Title: p.Title, Body: p.Body, Html: html}
 	out := struct {
 		Title string
 		Body  []byte
@@ -163,22 +178,6 @@ func renderTemplate(w http.ResponseWriter, r *http.Request, tmpl string, data in
 	}
 }
 
-func staticHandler(w http.ResponseWriter, r *http.Request) {
-	path := r.URL.Path[1:]
-	if len(path) == 0 || path[:1] == "/" {
-		http.Error(w, "Not found", http.StatusNotFound)
-	}
-	filename := staticDir + path
-	log.Println("Loading ", filename)
-	file, err := ioutil.ReadFile(filename)
-	if err != nil {
-		log.Println(err)
-		http.Error(w, "Not found", http.StatusNotFound)
-		return
-	}
-	fmt.Fprintf(w, "%s", file)
-}
-
 var titleValidator = regexp.MustCompile("([A-Z][a-z0-9])+")
 
 func makeHandler(fn func(http.ResponseWriter, *http.Request, string)) http.HandlerFunc {
@@ -193,8 +192,6 @@ func makeHandler(fn func(http.ResponseWriter, *http.Request, string)) http.Handl
 }
 
 func main() {
-	http.HandleFunc("/favicon.ico", staticHandler)
-	http.HandleFunc("/pub/", staticHandler)
 	http.HandleFunc("/", pageHandler)
 	http.ListenAndServe(":8080", nil)
 }
