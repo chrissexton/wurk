@@ -1,11 +1,18 @@
 <html>
 <head>
+	<link href="/css/bootstrap.css" rel="stylesheet">
+    <style>
+      body {
+        padding-top: 0px; /* 60px to make the container go all the way to the bottom of the topbar */
+      }
+    </style>
 	<title>chrissexton.org</title>
 </head>
 <body>
-	
-	<ul>
+	<h1>Chris Sexton</h1>
+	<ul class="breadcrumb">
 		{{range .}}
-			</i><a href="{{.Path}}">{{.Title}}</a></li>
+			<li><a href="{{.Path}}">{{.Title}}</a><span class="divider">/</span></li>
 		{{end}}
 	</ul>
+

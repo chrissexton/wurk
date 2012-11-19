@@ -8,6 +8,7 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
+	"os"
 	"regexp"
 	"strings"
 )
@@ -19,8 +20,7 @@ var htmlFiles = []string{
 	"html/dir.html",
 }
 
-var dataDir = "chrissexton.org/site/"
-var siteUrl = "http://127.0.0.1:8080"
+var dataDir string
 
 var templates *template.Template
 
@@ -71,10 +71,8 @@ func loadDir(path string) ([]Link, error) {
 	}
 
 	dirname := dataDir + path
-	log.Println("Loading directory: ", dirname)
 	files, err := ioutil.ReadDir(dirname)
 	if err != nil {
-		log.Println(err)
 		return nil, err
 	}
 
@@ -98,13 +96,11 @@ func loadPage(path string) (*Page, error) {
 		path = path + "index"
 	}
 	filename := dataDir + path + ".md"
-	log.Println("Loading ", filename)
 	body, err := ioutil.ReadFile(filename)
 	if err != nil {
-		log.Println(err)
 		return nil, errors.New("Page not found: " + path)
 	}
-	url := siteUrl + "/" + path
+	url := "/" + path
 	return &Page{path, body, url}, nil
 }
 
@@ -124,6 +120,7 @@ func dirHandler(w http.ResponseWriter, r *http.Request) {
 	dir, err := loadDir(path)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusNotFound)
+		log.Println(err)
 		return
 	}
 	renderTemplate(w, r, "header", breadCrumb(r.URL.Path))
@@ -134,7 +131,6 @@ func dirHandler(w http.ResponseWriter, r *http.Request) {
 func fileHandler(w http.ResponseWriter, r *http.Request) {
 	path := r.URL.Path[1:]
 	filename := dataDir + path
-	log.Println("Loading ", filename)
 	file, err := ioutil.ReadFile(filename)
 	if err != nil {
 		dirHandler(w, r)
@@ -192,6 +188,10 @@ func makeHandler(fn func(http.ResponseWriter, *http.Request, string)) http.Handl
 }
 
 func main() {
+	if len(os.Args) < 2 {
+		log.Fatal("Must have a data directory argument.")
+	}
+	dataDir = os.Args[1]
 	http.HandleFunc("/", pageHandler)
 	http.ListenAndServe(":8080", nil)
 }
