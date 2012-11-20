@@ -27,12 +27,6 @@ func init() {
 	templates = template.Must(template.ParseFiles(htmlFiles...))
 }
 
-type Page struct {
-	Title string
-	Body  []byte
-	Url   string
-}
-
 type Link struct {
 	Title string
 	Path  string
@@ -89,23 +83,22 @@ func loadDir(path string) ([]Link, error) {
 	return links, nil
 }
 
-func loadPage(path string) (*Page, error) {
+func loadPage(path string) ([]byte, error) {
 	path = path[1:]
 	if len(path) == 0 {
 		path = path + "index"
 	} else if path[len(path)-1:] == "/" {
-        // strip off / in case there's a .md one dir up
-        path = path[:len(path)-1]
-    } else if len(path) > 3 && path[len(path)-3:] == ".md" {
-        path = path[:len(path)-3]
-    }
+		// strip off / in case there's a .md one dir up
+		path = path[:len(path)-1]
+	} else if len(path) > 3 && path[len(path)-3:] == ".md" {
+		path = path[:len(path)-3]
+	}
 	filename := dataDir + path + ".md"
 	body, err := ioutil.ReadFile(filename)
 	if err != nil {
 		return nil, errors.New("Page not found: " + path)
 	}
-	url := "/" + path
-	return &Page{path, body, url}, nil
+	return body, nil
 }
 
 func dirHandler(w http.ResponseWriter, r *http.Request) {
@@ -144,19 +137,10 @@ func pageHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
-	html := template.HTML(blackfriday.MarkdownCommon(page.Body))
-	out := struct {
-		Title string
-		Body  []byte
-		Html  template.HTML
-	}{
-		page.Title,
-		page.Body,
-		html,
-	}
+	html := template.HTML(blackfriday.MarkdownCommon(page))
 	// pass the file into the view template
 	renderTemplate(w, r, "header", breadCrumb(r.URL.Path))
-	renderTemplate(w, r, "view", out)
+	renderTemplate(w, r, "view", html)
 	renderTemplate(w, r, "footer", nil)
 }
 
