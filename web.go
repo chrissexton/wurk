@@ -18,6 +18,9 @@ const (
 	importString = "bitbucket.org/phlyingpenguin/website"
 )
 
+// Cache for template files
+var templates map[string]*template.Template
+
 type Link struct {
 	Title string
 	Path  string
@@ -152,13 +155,18 @@ func pageHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 // Try to load and execute a template for the given site
-// TODO: these probably need to be loaded once instead of each time through
 func renderTemplate(w http.ResponseWriter, r *http.Request, tmpl string, data interface{}) {
-	t, err := template.ParseFiles(filepath.Join(getTmplPath(r), tmpl+".html"))
-	if err != nil {
-		http.Error(w, "Could not load templates.", http.StatusInternalServerError)
-		log.Println(err)
-		return
+	tPath := filepath.Join(getTmplPath(r), tmpl+"html")
+	t, ok := templates[tPath]
+	var err error
+	if !ok {
+		t, err = template.ParseFiles(filepath.Join(getTmplPath(r), tmpl+".html"))
+		if err != nil {
+			http.Error(w, "Could not load templates.", http.StatusInternalServerError)
+			log.Println(err)
+			return
+		}
+		templates[tPath] = t
 	}
 	err = t.Execute(w, data)
 	if err != nil {
@@ -210,4 +218,8 @@ func getTmplPath(r *http.Request) string {
 func main() {
 	http.HandleFunc("/", pageHandler)
 	log.Fatal(http.ListenAndServe("0.0.0.0:6969", nil))
+}
+
+func init() {
+	templates = make(map[string]*template.Template)
 }
