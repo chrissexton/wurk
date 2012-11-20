@@ -4,12 +4,18 @@ import (
 	"errors"
 	"fmt"
 	"github.com/russross/blackfriday"
+	"go/build"
 	"html/template"
 	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
+	"path/filepath"
 	"strings"
+)
+
+const (
+	importString = "bitbucket.org/phlyingpenguin/website"
 )
 
 type Link struct {
@@ -44,14 +50,13 @@ func breadCrumb(path string) []Link {
 
 // Produce a []Link to provide directory listings
 func loadDir(r *http.Request, path string) ([]Link, error) {
-	path = path
 	if len(path) == 0 || path[:1] == "/" {
 		return nil, errors.New("Path not found")
 	}
 
-	dirname := path
-	files, err := ioutil.ReadDir(dirname)
+	files, err := ioutil.ReadDir(path)
 	if err != nil {
+		log.Println("Couldn't load path ", path)
 		return nil, err
 	}
 
@@ -74,9 +79,8 @@ func loadDir(r *http.Request, path string) ([]Link, error) {
 // This attempts to open any file it possibly can to prevent
 // later loaders from taking over
 func loadPage(path string) ([]byte, error) {
-	path = path
 	if len(path) == 0 {
-		path = path + "index"
+		path = filepath.Join(path, "index")
 	} else if path[len(path)-1:] == "/" {
 		// strip off / in case there's a .md one dir up
 		path = path[:len(path)-1]
@@ -130,7 +134,7 @@ func pageHandler(w http.ResponseWriter, r *http.Request) {
 	path := getPubPath(r)
 	page, err := loadPage(path)
 	if err != nil {
-		page, err = loadPage(path + "/index")
+		page, err = loadPage(filepath.Join(path, "index"))
 		if err != nil {
 			fileHandler(w, r)
 			return
@@ -143,8 +147,10 @@ func pageHandler(w http.ResponseWriter, r *http.Request) {
 	renderTemplate(w, r, "footer", nil)
 }
 
+// Try to load and execute a template for the given site
+// TODO: these probably need to be loaded once instead of each time through
 func renderTemplate(w http.ResponseWriter, r *http.Request, tmpl string, data interface{}) {
-	t, err := template.ParseFiles(getTmplPath(r) + tmpl + ".html")
+	t, err := template.ParseFiles(filepath.Join(getTmplPath(r), tmpl+".html"))
 	if err != nil {
 		http.Error(w, "Could not load templates.", http.StatusInternalServerError)
 		log.Println(err)
@@ -159,15 +165,21 @@ func renderTemplate(w http.ResponseWriter, r *http.Request, tmpl string, data in
 
 // Check for requisite domain files, if none exist, redirect to an error page
 func checkDomain(w http.ResponseWriter, r *http.Request) error {
-	if _, err := os.Stat(getPubPath(r)); err != nil {
+	if _, err := os.Stat(filepath.Join(r.Host, "pub")); err != nil {
 		goto errpage
 	}
-	if _, err := os.Stat(getTmplPath(r)); err != nil {
+	if _, err := os.Stat(filepath.Join(r.Host, "templates")); err != nil {
 		goto errpage
 	}
 	return nil
 errpage:
-	t, err := template.ParseFiles("domainerror.html")
+	pkg, err := build.Import(importString, "", build.FindOnly)
+	if err != nil {
+		http.Error(w, "Error page unrenderable", http.StatusInternalServerError)
+		return errors.New("Terrible failure!")
+	}
+	p := filepath.Join(pkg.Dir, "domainerror.html")
+	t, err := template.ParseFiles(p)
 	if err != nil {
 		http.Error(w, "Error page unrenderable", http.StatusInternalServerError)
 		return errors.New("Terrible failure!")
@@ -183,12 +195,12 @@ func getUrl(r *http.Request, path string) string {
 
 // Take URL path and return local public path (based on hostname)
 func getPubPath(r *http.Request) string {
-	return r.Host + "/pub" + r.URL.Path
+	return filepath.Join(r.Host, "/pub", r.URL.Path)
 }
 
 // Take URL path and return local template path (based on hostname)
 func getTmplPath(r *http.Request) string {
-	return r.Host + "/templates/"
+	return filepath.Join(r.Host, "/templates/")
 }
 
 func main() {
