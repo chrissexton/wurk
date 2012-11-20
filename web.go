@@ -32,7 +32,7 @@ type Link struct {
 	Path  string
 }
 
-// Create a list of links for the breadcrumb
+// Create a slice of Link for the breadcrumb
 func breadCrumb(path string) []Link {
 	parts := strings.Split(path, "/")
 	var crumbs []Link
@@ -57,6 +57,7 @@ func breadCrumb(path string) []Link {
 	return crumbs
 }
 
+// Produce a []Link to provide directory listings
 func loadDir(path string) ([]Link, error) {
 	path = path[1:]
 	if len(path) == 0 || path[:1] == "/" {
@@ -83,6 +84,9 @@ func loadDir(path string) ([]Link, error) {
 	return links, nil
 }
 
+// Open the actual markdown files for service
+// This attempts to open any file it possibly can to prevent
+// later loaders from taking over
 func loadPage(path string) ([]byte, error) {
 	path = path[1:]
 	if len(path) == 0 {
@@ -101,6 +105,9 @@ func loadPage(path string) ([]byte, error) {
 	return body, nil
 }
 
+// Serve an index of any directory that hasn't been hit yet
+// Note: put an index.md in any directory that should not be
+// globally accessible.
 func dirHandler(w http.ResponseWriter, r *http.Request) {
 	path := r.URL.Path
 	dir, err := loadDir(path)
@@ -114,6 +121,9 @@ func dirHandler(w http.ResponseWriter, r *http.Request) {
 	renderTemplate(w, r, "footer", nil)
 }
 
+// Serve any raw files that may be in the directory
+// Note: this does not pass proper MIME types
+// This passes through to the dirHandler
 func fileHandler(w http.ResponseWriter, r *http.Request) {
 	path := r.URL.Path[1:]
 	filename := dataDir + path
@@ -125,6 +135,8 @@ func fileHandler(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "%s", file)
 }
 
+// Main handler funnction, tries to load any .md pages
+// This passes through to the fileHandler (and then to dirHandler)
 func pageHandler(w http.ResponseWriter, r *http.Request) {
 	// verify the file path
 	path := r.URL.Path
