@@ -1,0 +1,19 @@
+<html>
+<head>
+	<link href="data:image/x-icon;base64,AAABAAEAEBAQAAAAAAAoAQAAFgAAACgAAAAQAAAAIAAAAAEABAAAAAAAgAAAAAAAAAAAAAAAEAAAAAAAAAAAAAAA////ACXE/wDg4OAAApb+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAARARAAAAAAABEAAAAAAAAAEQzMAAAAAAAMREwAAAAAAMRMTMAAAAAAzMzMwAAAAADAAADAAAAAAAAIAAAAAAAAAIiAAAAAAABAAABAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD//wAA+T8AAPAfAADgDwAA4A8AAMAHAADABwAAwAcAAMAHAADABwAAwAcAAOAPAADgDwAA8B8AAPg/AAD//wAA" rel="icon" type="image/x-icon" />
+	<link href="/css/bootstrap.css" rel="stylesheet">
+    <style>
+      body {
+        padding-top: 0px; /* 60px to make the container go all the way to the bottom of the topbar */
+      }
+    </style>
+	<title>chrissexton.org</title>
+</head>
+<body>
+	<h1>Chris Sexton</h1>
+	<ul class="breadcrumb">
+		{{range .}}
+			<li><a href="{{.Path}}">{{.Title}}</a><span class="divider">/</span></li>
+		{{end}}
+	</ul>
+

@@ -8,7 +8,7 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
-	// "os"
+	"os"
 	"strings"
 )
 
@@ -124,6 +124,9 @@ func fileHandler(w http.ResponseWriter, r *http.Request) {
 // Main handler funnction, tries to load any .md pages
 // This passes through to the fileHandler (and then to dirHandler)
 func pageHandler(w http.ResponseWriter, r *http.Request) {
+	if err := checkDomain(w, r); err != nil {
+		return
+	}
 	path := getPubPath(r)
 	page, err := loadPage(path)
 	if err != nil {
@@ -152,6 +155,25 @@ func renderTemplate(w http.ResponseWriter, r *http.Request, tmpl string, data in
 		http.Error(w, "Could not load templates.", http.StatusInternalServerError)
 		log.Println(err)
 	}
+}
+
+// Check for requisite domain files, if none exist, redirect to an error page
+func checkDomain(w http.ResponseWriter, r *http.Request) error {
+	if _, err := os.Stat(getPubPath(r)); err != nil {
+		goto errpage
+	}
+	if _, err := os.Stat(getTmplPath(r)); err != nil {
+		goto errpage
+	}
+	return nil
+errpage:
+	t, err := template.ParseFiles("domainerror.html")
+	if err != nil {
+		http.Error(w, "Error page unrenderable", http.StatusInternalServerError)
+		return errors.New("Terrible failure!")
+	}
+	t.Execute(w, r.Host)
+	return errors.New("Domain not found.")
 }
 
 // Extract url from local file path
