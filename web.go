@@ -13,10 +13,10 @@ import (
 )
 
 var htmlFiles = []string{
-	"html/view.html",
-	"html/header.html",
-	"html/footer.html",
-	"html/dir.html",
+	"templates/view.html",
+	"templates/header.html",
+	"templates/footer.html",
+	"templates/dir.html",
 }
 
 var dataDir string
