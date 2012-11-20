@@ -8,24 +8,9 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
-	"os"
+	// "os"
 	"strings"
 )
-
-var htmlFiles = []string{
-	"templates/view.html",
-	"templates/header.html",
-	"templates/footer.html",
-	"templates/dir.html",
-}
-
-var dataDir string
-
-var templates *template.Template
-
-func init() {
-	templates = template.Must(template.ParseFiles(htmlFiles...))
-}
 
 type Link struct {
 	Title string
@@ -58,13 +43,13 @@ func breadCrumb(path string) []Link {
 }
 
 // Produce a []Link to provide directory listings
-func loadDir(path string) ([]Link, error) {
-	path = path[1:]
+func loadDir(r *http.Request, path string) ([]Link, error) {
+	path = path
 	if len(path) == 0 || path[:1] == "/" {
 		return nil, errors.New("Path not found")
 	}
 
-	dirname := dataDir + path
+	dirname := path
 	files, err := ioutil.ReadDir(dirname)
 	if err != nil {
 		return nil, err
@@ -73,13 +58,14 @@ func loadDir(path string) ([]Link, error) {
 	var links []Link
 	for _, file := range files {
 		f := file.Name()
+		// No hidden files to allow disabling files
 		if f[0] == '.' {
 			continue
 		}
 		if len(f) > 3 && f[len(f)-3:] == ".md" {
 			f = f[:len(f)-3]
 		}
-		links = append(links, Link{f, "/" + path + "/" + f})
+		links = append(links, Link{f, getUrl(r, path) + f})
 	}
 	return links, nil
 }
@@ -88,7 +74,7 @@ func loadDir(path string) ([]Link, error) {
 // This attempts to open any file it possibly can to prevent
 // later loaders from taking over
 func loadPage(path string) ([]byte, error) {
-	path = path[1:]
+	path = path
 	if len(path) == 0 {
 		path = path + "index"
 	} else if path[len(path)-1:] == "/" {
@@ -97,7 +83,7 @@ func loadPage(path string) ([]byte, error) {
 	} else if len(path) > 3 && path[len(path)-3:] == ".md" {
 		path = path[:len(path)-3]
 	}
-	filename := dataDir + path + ".md"
+	filename := path + ".md"
 	body, err := ioutil.ReadFile(filename)
 	if err != nil {
 		return nil, errors.New("Page not found: " + path)
@@ -109,8 +95,8 @@ func loadPage(path string) ([]byte, error) {
 // Note: put an index.md in any directory that should not be
 // globally accessible.
 func dirHandler(w http.ResponseWriter, r *http.Request) {
-	path := r.URL.Path
-	dir, err := loadDir(path)
+	path := getPubPath(r)
+	dir, err := loadDir(r, path)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusNotFound)
 		log.Println(err)
@@ -125,8 +111,8 @@ func dirHandler(w http.ResponseWriter, r *http.Request) {
 // Note: this does not pass proper MIME types
 // This passes through to the dirHandler
 func fileHandler(w http.ResponseWriter, r *http.Request) {
-	path := r.URL.Path[1:]
-	filename := dataDir + path
+	path := getPubPath(r)
+	filename := path
 	file, err := ioutil.ReadFile(filename)
 	if err != nil {
 		dirHandler(w, r)
@@ -138,9 +124,7 @@ func fileHandler(w http.ResponseWriter, r *http.Request) {
 // Main handler funnction, tries to load any .md pages
 // This passes through to the fileHandler (and then to dirHandler)
 func pageHandler(w http.ResponseWriter, r *http.Request) {
-	// verify the file path
-	path := r.URL.Path
-	// load up the file
+	path := getPubPath(r)
 	page, err := loadPage(path)
 	if err != nil {
 		page, err = loadPage(path + "/index")
@@ -157,20 +141,35 @@ func pageHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func renderTemplate(w http.ResponseWriter, r *http.Request, tmpl string, data interface{}) {
-	err := templates.ExecuteTemplate(w, tmpl+".html", data)
+	t, err := template.ParseFiles(getTmplPath(r) + tmpl + ".html")
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		http.Error(w, "Could not load templates.", http.StatusInternalServerError)
+		log.Println(err)
+		return
+	}
+	err = t.Execute(w, data)
+	if err != nil {
+		http.Error(w, "Could not load templates.", http.StatusInternalServerError)
+		log.Println(err)
 	}
 }
 
+// Extract url from local file path
+func getUrl(r *http.Request, path string) string {
+	return strings.Replace(path, r.Host+"/pub", "", 1) + "/"
+}
+
+// Take URL path and return local public path (based on hostname)
+func getPubPath(r *http.Request) string {
+	return r.Host + "/pub" + r.URL.Path
+}
+
+// Take URL path and return local template path (based on hostname)
+func getTmplPath(r *http.Request) string {
+	return r.Host + "/templates/"
+}
+
 func main() {
-	if len(os.Args) < 2 {
-		log.Fatal("Must have a data directory argument.")
-	}
-	dataDir = os.Args[1]
-	if dataDir[len(dataDir)-1] != '/' {
-		dataDir = dataDir + "/"
-	}
 	http.HandleFunc("/", pageHandler)
 	log.Fatal(http.ListenAndServe("0.0.0.0:6969", nil))
 }
