@@ -68,7 +68,7 @@ func loadDir(r *http.Request, path string) ([]Link, error) {
 	for _, file := range files {
 		f := file.Name()
 		// No hidden files to allow disabling files
-		if f[0] == '.' {
+		if f[0] == '.' || f == "_index.md" {
 			continue
 		}
 		if len(f) > 3 && f[len(f)-3:] == ".md" {
@@ -85,7 +85,7 @@ func loadDir(r *http.Request, path string) ([]Link, error) {
 // Open the actual markdown files for service
 // This attempts to open any file it possibly can to prevent
 // later loaders from taking over
-func loadPage(path string) ([]byte, error) {
+func loadPage(path string) (template.HTML, error) {
 	if len(path) == 0 {
 		path = filepath.Join(path, "index")
 	} else if path[len(path)-1:] == "/" {
@@ -97,9 +97,10 @@ func loadPage(path string) ([]byte, error) {
 	filename := path + ".md"
 	body, err := ioutil.ReadFile(filename)
 	if err != nil {
-		return nil, errors.New("Page not found: " + path)
+		return "", errors.New("Page not found: " + path)
 	}
-	return body, nil
+	html := template.HTML(blackfriday.MarkdownCommon(body))
+	return html, nil
 }
 
 // Serve an index of any directory that hasn't been hit yet
@@ -115,6 +116,9 @@ func dirHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	renderTemplate(w, r, "header", breadCrumb(r.URL.Path))
+	if summary, err := loadPage(path + "/_index.md"); err == nil {
+		renderTemplate(w, r, "view", summary)
+	}
 	renderTemplate(w, r, "dir", dir)
 	renderTemplate(w, r, "footer", nil)
 }
@@ -148,10 +152,9 @@ func pageHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
-	html := template.HTML(blackfriday.MarkdownCommon(page))
 	// pass the file into the view template
 	renderTemplate(w, r, "header", breadCrumb(r.URL.Path))
-	renderTemplate(w, r, "view", html)
+	renderTemplate(w, r, "view", page)
 	renderTemplate(w, r, "footer", nil)
 }
 
