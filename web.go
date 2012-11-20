@@ -43,7 +43,7 @@ func breadCrumb(path string) []Link {
 			break
 		}
 		title := strings.ToUpper(p[:1]) + p[1:]
-		title = strings.Replace(title, "_", " ", 0)
+		title = strings.Replace(title, "_", " ", -1)
 		crumbs = append(crumbs, Link{Title: title, Path: subpath + p})
 		subpath = subpath + p + "/"
 	}
