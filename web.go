@@ -109,7 +109,8 @@ func dirHandler(w http.ResponseWriter, r *http.Request) {
 	path := getPubPath(r)
 	dir, err := loadDir(r, path)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusNotFound)
+		msg := fmt.Sprintf("Could not load %s: File not found", r.URL.Path)
+		http.Error(w, msg, http.StatusNotFound)
 		log.Println(err)
 		return
 	}
