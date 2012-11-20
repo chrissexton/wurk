@@ -91,9 +91,14 @@ func loadDir(path string) ([]Link, error) {
 
 func loadPage(path string) (*Page, error) {
 	path = path[1:]
-	if len(path) == 0 || path[:1] == "/" {
+	if len(path) == 0 {
 		path = path + "index"
-	}
+	} else if path[len(path)-1:] == "/" {
+        // strip off / in case there's a .md one dir up
+        path = path[:len(path)-1]
+    } else if len(path) > 3 && path[len(path)-3:] == ".md" {
+        path = path[:len(path)-3]
+    }
 	filename := dataDir + path + ".md"
 	body, err := ioutil.ReadFile(filename)
 	if err != nil {
@@ -101,17 +106,6 @@ func loadPage(path string) (*Page, error) {
 	}
 	url := "/" + path
 	return &Page{path, body, url}, nil
-}
-
-const lenPath = len("/view/")
-
-func viewHandler(w http.ResponseWriter, r *http.Request, title string) {
-	p, err := loadPage(title)
-	if err != nil {
-		http.Redirect(w, r, "/edit/"+title, http.StatusFound)
-		return
-	}
-	renderTemplate(w, r, "view", p)
 }
 
 func dirHandler(w http.ResponseWriter, r *http.Request) {
