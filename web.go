@@ -60,6 +60,7 @@ func loadDir(r *http.Request, path string) ([]Link, error) {
 		return nil, err
 	}
 
+	cache := make(map[string]bool)
 	var links []Link
 	for _, file := range files {
 		f := file.Name()
@@ -70,7 +71,10 @@ func loadDir(r *http.Request, path string) ([]Link, error) {
 		if len(f) > 3 && f[len(f)-3:] == ".md" {
 			f = f[:len(f)-3]
 		}
-		links = append(links, Link{f, getUrl(r, path) + f})
+		if _, ok := cache[f]; !ok {
+			links = append(links, Link{f, getUrl(r, path) + f})
+			cache[f] = true
+		}
 	}
 	return links, nil
 }
