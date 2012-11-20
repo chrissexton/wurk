@@ -176,5 +176,5 @@ func main() {
 		dataDir = dataDir + "/"
 	}
 	http.HandleFunc("/", pageHandler)
-	http.ListenAndServe("127.0.0.1:6969", nil)
+	log.Fatal(http.ListenAndServe("0.0.0.0:6969", nil))
 }
