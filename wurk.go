@@ -15,7 +15,7 @@ import (
 )
 
 const (
-	importString = "bitbucket.org/phlyingpenguin/website"
+	importString = "bitbucket.org/phlyingpenguin/wurk"
 )
 
 // Cache for template files
