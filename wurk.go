@@ -15,7 +15,7 @@ import (
 )
 
 const (
-	importString = "bitbucket.org/phlyingpenguin/wurk"
+	importString = "github.com/chrissexton/wurk"
 )
 
 // Cache for template files
