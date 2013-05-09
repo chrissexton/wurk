@@ -102,6 +102,18 @@ func loadPage(path string) (template.HTML, error) {
 	return html, nil
 }
 
+// Try to load an index.html file, maybe fail
+func htmlIndex(w http.ResponseWriter, r *http.Request) bool {
+	path := getPubPath(r)
+	filename := path + "/index.html"
+	file, err := ioutil.ReadFile(filename)
+	if err != nil {
+		return false
+	}
+	fmt.Fprintf(w, "%s", file)
+	return true
+}
+
 // Serve an index of any directory that hasn't been hit yet
 // Note: put an index.md in any directory that should not be
 // globally accessible.
@@ -114,6 +126,11 @@ func dirHandler(w http.ResponseWriter, r *http.Request) {
 		log.Println(err)
 		return
 	}
+
+	if htmlIndex(w, r) {
+		return
+	}
+
 	renderTemplate(w, r, "header", breadCrumb(r.URL.Path))
 	if summary, err := loadPage(path + "/_index.md"); err == nil {
 		renderTemplate(w, r, "view", summary)
