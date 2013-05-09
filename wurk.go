@@ -4,7 +4,6 @@ import (
 	"errors"
 	"fmt"
 	"github.com/russross/blackfriday"
-	"go/build"
 	"html/template"
 	"io/ioutil"
 	"log"
@@ -15,7 +14,7 @@ import (
 )
 
 const (
-	importString = "github.com/chrissexton/wurk"
+	domainError = `Sorry, this server doesn't know how to serve {{.}}!`
 )
 
 // Cache for template files
@@ -189,13 +188,8 @@ func checkDomain(w http.ResponseWriter, r *http.Request) error {
 	}
 	return nil
 errpage:
-	pkg, err := build.Import(importString, "", build.FindOnly)
-	if err != nil {
-		http.Error(w, "Error page unrenderable", http.StatusInternalServerError)
-		return errors.New("Terrible failure!")
-	}
-	p := filepath.Join(pkg.Dir, "domainerror.html")
-	t, err := template.ParseFiles(p)
+	tmpl := template.New("domainError")
+	t, err := tmpl.Parse(domainError)
 	if err != nil {
 		http.Error(w, "Error page unrenderable", http.StatusInternalServerError)
 		return errors.New("Terrible failure!")
