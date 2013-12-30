@@ -145,12 +145,12 @@ func dirHandler(w http.ResponseWriter, r *http.Request) {
 func fileHandler(w http.ResponseWriter, r *http.Request) {
 	path := getPubPath(r)
 	filename := path
-	file, err := ioutil.ReadFile(filename)
+	_, err := ioutil.ReadFile(filename)
 	if err != nil {
 		dirHandler(w, r)
 		return
 	}
-	fmt.Fprintf(w, "%s", file)
+	http.ServeFile(w, r, filename)
 }
 
 // Main handler funnction, tries to load any .md pages
