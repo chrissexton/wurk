@@ -1,3 +1,7 @@
+---
+title: subdir stuff
+author: foo
+---
 Directory Index
 ===============
 

@@ -1,19 +1,106 @@
-<html>
+<!DOCTYPE html>
+<html lang="en">
 <head>
-	<link href="data:image/x-icon;base64,AAABAAEAEBAQAAAAAAAoAQAAFgAAACgAAAAQAAAAIAAAAAEABAAAAAAAgAAAAAAAAAAAAAAAEAAAAAAAAAAAAAAA////ACXE/wDg4OAAApb+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAARARAAAAAAABEAAAAAAAAAEQzMAAAAAAAMREwAAAAAAMRMTMAAAAAAzMzMwAAAAADAAADAAAAAAAAIAAAAAAAAAIiAAAAAAABAAABAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD//wAA+T8AAPAfAADgDwAA4A8AAMAHAADABwAAwAcAAMAHAADABwAAwAcAAOAPAADgDwAA8B8AAPg/AAD//wAA" rel="icon" type="image/x-icon" />
-	<link href="/css/bootstrap.css" rel="stylesheet">
-    <style>
-      body {
-        padding-top: 0px; /* 60px to make the container go all the way to the bottom of the topbar */
-      }
-    </style>
-	<title>Example Website</title>
+	<title>{{.Title}}</title>
+	<meta charset="utf-8">
+	<meta property="og:type" content="website">
+	<meta property="og:title" content="{{.Title}}">
+	<meta property="og:description" content="@cws is on omg.lol!">
+	<meta property="og:image" content="https://profiles.cache.lol/cws/picture?v=1679933139.6792">
+	<meta name="viewport" content="width=device-width">
+	<meta name="generator" content="pandoc">
+	<link href="https://cdn.cache.lol/profiles/themes/css/base.css" rel="stylesheet">
+	<link href="https://cdn.cache.lol/profiles/themes/css/gilded.css" rel="stylesheet">
+	<style>
+		.omg-verified::before {
+			display: none;
+		}
+		#profile-picture-container>a:link {
+			border-bottom: none !important;
+		}
+		#profile-picture-container>a:visited {
+			border-bottom: none !important;
+		}
+		#profile-picture-container>a:active {
+			border-bottom: none !important;
+		}
+		#profile-picture-container>a:hover {
+			border-bottom: none !important;
+		}
+		.verified {
+			color: #fabc02 !important;
+			border-bottom: none;
+		}
+		a.verified:link {
+			border-bottom: none !important;
+		}
+		a.verified:visited {
+			border-bottom: none !important;
+		}
+		a.verified:active {
+			border-bottom: none !important;
+		}
+		a.verified:hover {
+			border-bottom: none !important;
+		}
+		article {
+			text-align: left;
+		}
+		article>h1 {
+			text-align: center;
+		}
+		article>aside {
+			text-align: center;
+		}
+		/* Style the list */
+		ul.breadcrumb {
+			padding: 10px 16px;
+			list-style: none;
+		}
+
+		/* Display list items side by side */
+		ul.breadcrumb li {
+			display: inline;
+		}
+
+		/* Add a slash symbol (/) before/behind each list item */
+		ul.breadcrumb li+li:before {
+			padding: 4px;
+			content: "/\00a0";
+		}
+		.breadcrumb {
+			display: none;
+		}
+	</style>
+	<link rel="icon" type="image/png" href="https://profiles.cache.lol/cws/picture">
+	<script src="//code.iconify.design/1/1.0.6/iconify.min.js"></script>
+	<script>
+		window.onload = function() {
+			document.getElementById('verification').remove()
+		}
+	</script>
+	<style>
+		.prami-body { fill: #ff69ad; }
+		.prami-left-eye, .prami-right-eye { fill: #461036; }
+		.prami-left-eye-pupil, .prami-right-eye-pupil { stroke: #461036; }
+		.prami-left-cheek, .prami-right-cheek { fill: #e34198; }
+		.prami-mouth { stroke: #461036; }
+	</style>
 </head>
 <body>
-	<h1>Example</h1>
+<main>
+	<div id="profile-picture-container">
+		<a href="https://chrissexton.org"><img alt="cws" id="profile-picture" src="https://profiles.cache.lol/cws/picture?v=1679933135"></a>
+	</div>
+	<h1 id="name">
+		<a href="https://chrissexton.org">Chris</a> <a rel="me" class="verified" href="https://home.omg.lol/lookup/cws"><span class="verified iconify omg-icon" data-icon="mdi-penguin" title="This account has been verified by omg.lol"></span></a> <a id="verification" style="text-decoration: none; border: 0;" href="https://home.omg.lol/lookup/cws"><i class="omg-icon omg-verified"></i></a>
+	</h1>
+	<hr>
+
+
 	<ul class="breadcrumb">
-		{{range .}}
-			<li><a href="{{.Path}}">{{.Title}}</a><span class="divider">/</span></li>
+		{{range .BreadCrumb}}
+			<li><a href="{{.Path}}">{{.Title}}</a><span class="divider"></span></li>
 		{{end}}
 	</ul>
 

@@ -1,9 +1,12 @@
 package main
 
 import (
+	"bytes"
 	"errors"
+	"flag"
 	"fmt"
-	"github.com/russross/blackfriday"
+	"github.com/gernest/front"
+	"github.com/russross/blackfriday/v2"
 	"html/template"
 	"io/ioutil"
 	"log"
@@ -11,11 +14,22 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 )
 
 const (
 	domainError = `Sorry, this server doesn't know how to serve {{.}}!`
 )
+
+// PageInfo tracks any information given to templates
+type PageInfo struct {
+	BreadCrumb []Link
+	Title      string
+	Date       string
+	Author     string
+	Dir        []Link
+	Page       template.HTML
+}
 
 // Cache for template files
 var templates map[string]*template.Template
@@ -30,7 +44,7 @@ func breadCrumb(path string) []Link {
 	parts := strings.Split(path, "/")
 	var crumbs []Link
 	crumbs = append(crumbs, Link{Title: "Home", Path: "/"})
-	subpath := "/"
+	subPath := "/"
 
 	if len(parts) == 1 {
 		return crumbs
@@ -43,8 +57,8 @@ func breadCrumb(path string) []Link {
 		}
 		title := strings.ToUpper(p[:1]) + p[1:]
 		title = strings.Replace(title, "_", " ", -1)
-		crumbs = append(crumbs, Link{Title: title, Path: subpath + p})
-		subpath = subpath + p + "/"
+		crumbs = append(crumbs, Link{Title: title, Path: subPath + p})
+		subPath = subPath + p + "/"
 	}
 
 	return crumbs
@@ -84,7 +98,7 @@ func loadDir(r *http.Request, path string) ([]Link, error) {
 // Open the actual markdown files for service
 // This attempts to open any file it possibly can to prevent
 // later loaders from taking over
-func loadPage(path string) (template.HTML, error) {
+func loadPage(path string) (template.HTML, map[string]interface{}, error) {
 	if len(path) == 0 {
 		path = filepath.Join(path, "index")
 	} else if path[len(path)-1:] == "/" {
@@ -94,12 +108,15 @@ func loadPage(path string) (template.HTML, error) {
 		path = path[:len(path)-3]
 	}
 	filename := path + ".md"
-	body, err := ioutil.ReadFile(filename)
+	fileContents, err := os.ReadFile(filename)
 	if err != nil {
-		return "", errors.New("Page not found: " + path)
+		return "", nil, errors.New("Page not found: " + path)
 	}
-	html := template.HTML(blackfriday.MarkdownCommon(body))
-	return html, nil
+	m := front.NewMatter()
+	m.Handle("---", front.YAMLHandler)
+	f, body, err := m.Parse(bytes.NewBuffer(fileContents))
+	html := template.HTML(blackfriday.Run([]byte(body)))
+	return html, f, nil
 }
 
 // Try to load an index.html file, maybe fail
@@ -130,13 +147,17 @@ func dirHandler(w http.ResponseWriter, r *http.Request) {
 	if htmlIndex(w, r) {
 		return
 	}
-
-	renderTemplate(w, r, "header", breadCrumb(r.URL.Path))
-	if summary, err := loadPage(path + "/_index.md"); err == nil {
-		renderTemplate(w, r, "view", summary)
+	summary, f, err := loadPage(path + "/_index.md")
+	info := NewPageInfo(f)
+	info.BreadCrumb = breadCrumb(r.URL.Path)
+	info.Dir = dir
+	info.Page = summary
+	renderTemplate(w, r, "header", info)
+	if err == nil {
+		renderTemplate(w, r, "view", info)
 	}
-	renderTemplate(w, r, "dir", dir)
-	renderTemplate(w, r, "footer", nil)
+	renderTemplate(w, r, "dir", info)
+	renderTemplate(w, r, "footer", info)
 }
 
 // Serve any raw files that may be in the directory
@@ -160,18 +181,21 @@ func pageHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	path := getPubPath(r)
-	page, err := loadPage(path)
+	page, f, err := loadPage(path)
 	if err != nil {
-		page, err = loadPage(filepath.Join(path, "index"))
+		page, f, err = loadPage(filepath.Join(path, "index"))
 		if err != nil {
 			fileHandler(w, r)
 			return
 		}
 	}
+	info := NewPageInfo(f)
+	info.BreadCrumb = breadCrumb(r.URL.Path)
+	info.Page = page
 	// pass the file into the view template
-	renderTemplate(w, r, "header", breadCrumb(r.URL.Path))
-	renderTemplate(w, r, "view", page)
-	renderTemplate(w, r, "footer", nil)
+	renderTemplate(w, r, "header", info)
+	renderTemplate(w, r, "view", info)
+	renderTemplate(w, r, "footer", info)
 }
 
 // Try to load and execute a template for the given site
@@ -209,10 +233,10 @@ errpage:
 	t, err := tmpl.Parse(domainError)
 	if err != nil {
 		http.Error(w, "Error page unrenderable", http.StatusInternalServerError)
-		return errors.New("Terrible failure!")
+		return errors.New("terrible failure")
 	}
 	t.Execute(w, r.Host)
-	return errors.New("Domain not found.")
+	return errors.New("domain not found")
 }
 
 // Extract url from local file path
@@ -230,11 +254,31 @@ func getTmplPath(r *http.Request) string {
 	return filepath.Join(r.Host, "/templates/")
 }
 
+var addr = flag.String("addr", "0.0.0.0:6969", "Where")
+
 func main() {
+	flag.Parse()
 	http.HandleFunc("/", pageHandler)
-	log.Fatal(http.ListenAndServe("0.0.0.0:6969", nil))
+	log.Println("Listening on http://" + *addr)
+	log.Fatal(http.ListenAndServe(*addr, nil))
 }
 
 func init() {
 	templates = make(map[string]*template.Template)
+}
+
+func NewPageInfo(f map[string]interface{}) PageInfo {
+	pi := PageInfo{
+		Date: time.Now().Format(time.DateTime),
+	}
+	if d, ok := f["date"]; ok {
+		pi.Date = d.(string)
+	}
+	if a, ok := f["author"]; ok {
+		pi.Author = a.(string)
+	}
+	if t, ok := f["title"]; ok {
+		pi.Title = t.(string)
+	}
+	return pi
 }
