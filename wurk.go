@@ -70,7 +70,7 @@ func loadDir(r *http.Request, path string) ([]Link, error) {
 		return nil, errors.New("Path not found")
 	}
 
-	files, err := ioutil.ReadDir(path)
+	files, err := os.ReadDir(path)
 	if err != nil {
 		log.Println("Couldn't load path ", path)
 		return nil, err
@@ -80,9 +80,6 @@ func loadDir(r *http.Request, path string) ([]Link, error) {
 	var links []Link
 	for _, file := range files {
 		f := file.Name()
-		if file.IsDir() {
-			f += "/"
-		}
 		// No hidden files to allow disabling files
 		if f[0] == '.' || f == "_index.md" {
 			continue
@@ -91,7 +88,11 @@ func loadDir(r *http.Request, path string) ([]Link, error) {
 			f = f[:len(f)-3]
 		}
 		if _, ok := cache[f]; !ok {
-			links = append(links, Link{f, getUrl(r, path) + f})
+			trailing := ""
+			if file.IsDir() {
+				trailing = "/"
+			}
+			links = append(links, Link{f, getUrl(r, path) + f + trailing})
 			cache[f] = true
 		}
 	}
