@@ -80,6 +80,9 @@ func loadDir(r *http.Request, path string) ([]Link, error) {
 	var links []Link
 	for _, file := range files {
 		f := file.Name()
+		if file.IsDir() {
+			f += "/"
+		}
 		// No hidden files to allow disabling files
 		if f[0] == '.' || f == "_index.md" {
 			continue
