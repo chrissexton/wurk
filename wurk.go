@@ -34,7 +34,12 @@ type PageInfo struct {
 }
 
 // Cache for template files
-var templates map[string]*template.Template
+type templateCache struct {
+	t  *template.Template
+	ts time.Time
+}
+
+var templates map[string]templateCache
 
 type Link struct {
 	Title string
@@ -207,18 +212,21 @@ func pageHandler(w http.ResponseWriter, r *http.Request) {
 // Try to load and execute a template for the given site
 func renderTemplate(w http.ResponseWriter, r *http.Request, tmpl string, data PageInfo) {
 	tPath := filepath.Join(getTmplPath(r), tmpl+"html")
-	t, ok := templates[tPath]
+	tc, ok := templates[tPath]
 	var err error
-	if !ok {
-		t, err = template.ParseFiles(filepath.Join(getTmplPath(r), tmpl+".html"))
+	if !ok || tc.ts.Before(time.Now().Add(-*cacheTimeout)) {
+		tc.t, err = template.ParseFiles(filepath.Join(getTmplPath(r), tmpl+".html"))
 		if err != nil {
 			http.Error(w, "Could not load templates.", http.StatusInternalServerError)
 			log.Println(err)
 			return
 		}
-		templates[tPath] = t
+		templates[tPath] = templateCache{
+			t:  tc.t,
+			ts: time.Now(),
+		}
 	}
-	err = t.Execute(w, data)
+	err = tc.t.Execute(w, data)
 	if err != nil {
 		http.Error(w, "Could not load templates.", http.StatusInternalServerError)
 		log.Println(err)
@@ -261,6 +269,7 @@ func getTmplPath(r *http.Request) string {
 }
 
 var addr = flag.String("addr", "0.0.0.0:6969", "Where")
+var cacheTimeout = flag.Duration("cacheTimeout", time.Minute, "cache timeout duration")
 
 func main() {
 	flag.Parse()
@@ -270,7 +279,7 @@ func main() {
 }
 
 func init() {
-	templates = make(map[string]*template.Template)
+	templates = make(map[string]templateCache)
 }
 
 func NewPageInfo(f map[string]interface{}) PageInfo {
