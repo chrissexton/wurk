@@ -25,7 +25,9 @@ const (
 type PageInfo struct {
 	BreadCrumb []Link
 	Title      string
+	RawDate    time.Time
 	Date       string
+	Time       string
 	Author     string
 	Dir        []Link
 	Page       template.HTML
@@ -203,7 +205,7 @@ func pageHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 // Try to load and execute a template for the given site
-func renderTemplate(w http.ResponseWriter, r *http.Request, tmpl string, data interface{}) {
+func renderTemplate(w http.ResponseWriter, r *http.Request, tmpl string, data PageInfo) {
 	tPath := filepath.Join(getTmplPath(r), tmpl+"html")
 	t, ok := templates[tPath]
 	var err error
@@ -272,11 +274,20 @@ func init() {
 }
 
 func NewPageInfo(f map[string]interface{}) PageInfo {
+	t := time.Now()
 	pi := PageInfo{
-		Date: time.Now().Format(time.DateTime),
+		RawDate: t,
+		Date:    "",
+		Time:    "",
+	}
+	if t, ok := f["time"]; ok {
+		pi.Time = t.(string)
 	}
 	if d, ok := f["date"]; ok {
 		pi.Date = d.(string)
+	} else {
+		pi.Date = t.Format(time.DateOnly)
+		pi.Time = t.Format("15:04")
 	}
 	if a, ok := f["author"]; ok {
 		pi.Author = a.(string)

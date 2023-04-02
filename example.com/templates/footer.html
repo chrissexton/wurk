@@ -1,5 +1,5 @@
 <aside class="post-info">
-    <i class="fa-solid fa-clock"></i> {{.Date}}
+    <i class="fa-solid fa-clock"></i> {{ if .Time }} On {{ .Date }} at {{ .Time }} {{- else }} On {{ .Date }} {{ end }}
 </aside>
 
 </article>
